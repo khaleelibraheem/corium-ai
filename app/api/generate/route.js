@@ -128,103 +128,90 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini client with explicit API key
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
-
-// Extract first JSON object from any string
-function extractJSON(text) {
-  const match = text.match(/\{[\s\S]*\}/); // first {...} block
-  if (!match) throw new Error("No JSON found in model output");
-  return match[0];
-}
 
 export async function POST(req) {
   try {
     const { skinType, concerns, products } = await req.json();
 
-    // Fallback mock data if no API key
-    // if (!process.env.GEMINI_API_KEY) {
-    //   await new Promise((r) => setTimeout(r, 2000));
-    //   return Response.json({
-    //     analysis: "Your skin barrier appears to be slightly compromised, indicated by dryness and sensitivity.",
-    //     am_routine: [
-    //       { name: "Milky Cream Cleanser", type: "Cleanse", note: "Avoid hot water.", example: "La Roche-Posay Toleriane Hydrating Cleanser" },
-    //       { name: "Hypochlorous Spray", type: "Balance", note: "Reduces redness.", example: "Tower 28 SOS Daily Rescue Spray" },
-    //       { name: "Polyglutamic Acid Serum", type: "Hydrate", note: "Boosts hydration.", example: "The Inkey List Polyglutamic Acid" },
-    //       { name: "Mineral SPF 30+", type: "Protect", note: "Zinc calms skin.", example: "EltaMD UV Restore SPF 40" },
-    //     ],
-    //     pm_routine: [
-    //       { name: "Oat Cleansing Balm", type: "First Cleanse", note: "Gentle on the barrier.", example: "The Inkey List Oat Cleansing Balm" },
-    //       { name: "Hydrating Wash", type: "Second Cleanse", note: "Non-stripping.", example: "CeraVe Hydrating Cleanser" },
-    //       { name: "Azelaic Acid 10%", type: "Treat", note: "Targets redness & texture.", example: "The Ordinary Azelaic Acid Suspension 10%" },
-    //       { name: "Lipid Cream", type: "Repair", note: "Ceramides restore barrier.", example: "Skinfix Barrier+ Triple Lipid Peptide Cream" },
-    //     ],
-    //     tips: ["Avoid fragrance.", "Wash pillowcases regularly."],
-    //   });
-    // }
+    const prompt = `
+    ACT AS: A Senior Clinical Dermatologist and Cosmetic Chemist.
+    CONTEXT: The user is in India.
+    
+    TASK: Generate a hyper-personalized skincare protocol based on the user's biometrics and current product inventory.
+    
+    USER BIOMETRICS:
+    - Skin Phenotype: ${skinType}
+    - Primary Concerns: ${concerns.join(", ")}
+    - Current Ritual/Inventory: ${products ? products : "None/Starting Fresh"}
 
-    // ⭐ Updated prompt including example field
-const prompt = `
-You are a celebrity dermatologist.
-Return **only valid JSON**, with no markdown, no code fences, no examples outside the JSON, and no commentary.
+    CRITICAL "CONFLICT ENGINE" LOGIC:
+    1. Analyze the user's "Current Ritual".
+    2. If they are using strong actives (Retinol, Tretinoin, high % AHA/BHA, Benzoyl Peroxide), do NOT recommend conflicting actives in the same routine block.
+    3. If a user's current product is good, integrate it. If it is harmful/conflicting, replace it.
+    4. Prioritize barrier health over aggressive treatment.
 
-STRUCTURE:
-{
-  "analysis": "string",
-  "am_routine": [
-    { 
-      "name": "string", 
-      "type": "string", 
-      "note": "string",
-      "example": "string",
-      "price_range": "string"
+    OUTPUT RULES:
+    - Return ONLY valid JSON.
+    - Product recommendations must be widely available in India (Nykaa, Amazon India, Pharmacy brands).
+    - Prices in Indian Rupees (₹).
+    - "type" should be scientific functional steps (e.g., "Lipid Cleanse", "Tyrosinase Inhibitor", "Occlusive").
+
+    JSON STRUCTURE:
+    {
+      "analysis": "A sophisticated, 2-sentence clinical diagnosis of their skin state based on the input.",
+      "am_routine": [
+        { 
+          "name": "Product Name (Brand)", 
+          "type": "Functional Step", 
+          "note": "Why this specific ingredient fits their biology.",
+          "example": "Specific Product Recommendation",
+          "price_range": "₹XXX - ₹XXX"
+        }
+      ],
+      "pm_routine": [
+        // Same structure
+      ],
+      "tips": [
+        "3 high-level clinical tips (e.g., about pillowcases, diet, or specific ingredient warnings)"
+      ]
     }
-  ],
-  "pm_routine": [
-    { 
-      "name": "string", 
-      "type": "string", 
-      "note": "string",
-      "example": "string",
-      "price_range": "string"
-    }
-  ],
-  "tips": ["string"]
-}
+    `;
 
-PRODUCT RULES:
-- "example" must be a **real product widely available in India**.
-- Price ranges must be realistic for India (e.g., "₹250–₹450", "₹799–₹1299").
-- Avoid rare or prescription-only products.
-- Do NOT include links, availability notes, or store names — ONLY the brand product name and price range.
-
-STYLE RULES:
-- Keep product names concise.
-- Output strictly valid JSON.
-- No additional text before or after the JSON.
-
-Skin: ${skinType}
-Concerns: ${concerns.join(", ")}
-Products user already uses: ${products}
-`;
-
-
+    // 1. Call Gemini
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      responseMimeType: "application/json",
-      contents: prompt,
+      config: { responseMimeType: "application/json" },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    // Gemini already returns clean JSON because of responseMimeType
-    const json = JSON.parse(response.text);
+    // 2. ERROR FIX: Handle the response structure correctly
+    // The new SDK returns the object directly, NOT inside .data
+    const candidate = response.candidates?.[0];
+
+    // Check if the model refused to answer (Safety block) or failed
+    if (!candidate || !candidate.content || !candidate.content.parts) {
+      console.error("Gemini Response Error:", JSON.stringify(response, null, 2));
+      throw new Error("Model returned no content. It might have been blocked by safety settings.");
+    }
+
+    // 3. Extract Text
+    let rawText = candidate.content.parts[0].text;
+
+    // 4. Clean & Parse JSON
+    // Remove markdown code fences if they exist
+    rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    
+    const json = JSON.parse(rawText);
 
     return Response.json(json);
+
   } catch (error) {
-    console.error("Gemini parse error:", error);
+    console.error("Generation Failed:", error);
     return Response.json(
-      { error: "Failed to generate valid JSON" },
+      { error: "Failed to generate protocol. Please try again." },
       { status: 500 }
     );
   }

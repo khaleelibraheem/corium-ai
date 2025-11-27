@@ -16,6 +16,8 @@ import {
   Database,
   BrainCircuit,
   X,
+  AlertTriangle,
+  RefreshCcw,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -52,9 +54,9 @@ const useTypewriter = (text, speed = 20, start = false, onComplete) => {
   return displayedText;
 };
 
-export default function SkincareApp() {
+export default function CoriumAI() {
   const [view, setView] = useState("consultation"); // 'consultation' | 'science'
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(6);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     skinType: "",
@@ -99,31 +101,51 @@ export default function SkincareApp() {
 
   const generateRoutine = async () => {
     setLoading(true);
-    setStep(4); // Loading View
+    setStep(4); // Show Loading Skeleton
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+
+      // 1. Check if the server actually said "OK" (Status 200-299)
+      if (!res.ok) {
+        throw new Error(`Server Error: ${res.status}`);
+      }
+
       const data = await res.json();
+
+      // 2. DATA INTEGRITY CHECK (The "Blank Page" Killer)
+      // If the AI returned garbage or an empty object, throw an error immediately.
+      if (
+        !data ||
+        !data.am_routine ||
+        !Array.isArray(data.am_routine) ||
+        data.am_routine.length === 0
+      ) {
+        throw new Error("Received empty or malformed protocol from AI");
+      }
+
       setResult(data);
-      // Min 1 second load time to show off the animation
+
+      // Wait 1s for the animation to look good, then show results
       setTimeout(() => {
         setLoading(false);
         setStep(5);
       }, 1000);
     } catch (error) {
-      console.error(error);
-      setStep(3); // Go back if error
+      console.error("Routine Generation Failed:", error);
       setLoading(false);
+      setStep(6); // <--- FORCE THE ERROR VIEW
     }
   };
 
   const isOnboarding = step > 0 && step < 5 && view === "consultation";
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] flex flex-col font-sans selection:bg-[var(--color-primary)] selection:text-white">
+    <div className="min-h-screen bg-[#FAFAF9] flex flex-col font-sans selection:bg-primary selection:text-white">
       <style jsx global>{`
         :root {
           --color-primary: #d4a373;
@@ -167,7 +189,7 @@ export default function SkincareApp() {
                   </div>
                   <div className="h-1 w-16 sm:w-24 bg-stone-200 rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-[var(--color-primary-dark)]"
+                      className="h-full bg-primary-dark"
                       initial={{ width: 0 }}
                       animate={{ width: `${(step / 3) * 100}%` }}
                       transition={{ type: "spring", stiffness: 50 }}
@@ -231,7 +253,7 @@ export default function SkincareApp() {
                     className="text-center space-y-8"
                   >
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-white mb-8">
-                      <span className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse"></span>
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
                         Clinical Intelligence
                       </span>
@@ -239,9 +261,7 @@ export default function SkincareApp() {
 
                     <h1 className="font-serif text-5xl md:text-7xl text-stone-900 leading-[1.1]">
                       Your skin, <br />
-                      <span className="italic text-[var(--color-primary)]">
-                        decoded.
-                      </span>
+                      <span className="italic text-primary">decoded.</span>
                     </h1>
 
                     <p className="text-lg md:text-xl text-stone-500 max-w-lg mx-auto leading-relaxed">
@@ -252,7 +272,7 @@ export default function SkincareApp() {
                     <div className="pt-8">
                       <button
                         onClick={nextStep}
-                        className="group bg-stone-900 text-white px-10 py-5 rounded-full text-lg font-medium transition-all hover:bg-stone-800 hover:shadow-xl hover:shadow-[var(--color-primary)]/20 inline-flex items-center gap-2 cursor-pointer"
+                        className="group bg-stone-900 text-white px-10 py-5 rounded-full text-lg font-medium transition-all hover:bg-stone-800 hover:shadow-xl hover:shadow-(--color-primary)/20 inline-flex items-center gap-2 cursor-pointer"
                       >
                         Start Consultation
                         <ArrowRight
@@ -279,8 +299,8 @@ export default function SkincareApp() {
                           className={cn(
                             "group p-6 rounded-xl border text-left transition-all duration-300 relative overflow-hidden cursor-pointer",
                             formData.skinType === type.id
-                              ? "border-[var(--color-primary)] bg-white shadow-lg ring-1 ring-[var(--color-primary)]"
-                              : "border-stone-200 bg-white hover:border-[var(--color-primary-dark)] hover:shadow-md"
+                              ? "border-primary bg-white shadow-lg ring-1 ring-primary"
+                              : "border-stone-200 bg-white hover:border-primary-dark hover:shadow-md"
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -288,7 +308,7 @@ export default function SkincareApp() {
                               {type.label}
                             </span>
                             {formData.skinType === type.id && (
-                              <CheckCircle2 className="text-[var(--color-primary)] w-5 h-5" />
+                              <CheckCircle2 className="text-primary w-5 h-5" />
                             )}
                           </div>
                           <p className="text-sm text-stone-500 leading-relaxed">
@@ -319,7 +339,7 @@ export default function SkincareApp() {
                             "px-4 py-4 rounded-xl text-sm font-medium transition-all duration-200 border flex flex-col items-center justify-center gap-2 text-center h-24 cursor-pointer",
                             formData.concerns.includes(concern)
                               ? "bg-stone-900 text-white border-stone-900 shadow-md scale-[1.02]"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-[var(--color-primary)] hover:shadow-sm"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-primary hover:shadow-sm"
                           )}
                         >
                           {concern}
@@ -355,8 +375,8 @@ export default function SkincareApp() {
                     }
                   >
                     <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-primary)] to-stone-300 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-                      <div className="relative bg-white p-2 rounded-2xl border border-stone-200 shadow-sm focus-within:ring-2 focus-within:ring-[var(--color-primary)] focus-within:border-transparent transition-all">
+                      <div className="absolute -inset-1 bg-linear-to-r from-primary to-stone-300 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                      <div className="relative bg-white p-2 rounded-2xl border border-stone-200 shadow-sm focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all">
                         <textarea
                           value={formData.products}
                           onChange={(e) =>
@@ -387,7 +407,7 @@ export default function SkincareApp() {
                       </button>
                       <button
                         onClick={generateRoutine}
-                        className="bg-[var(--color-primary)] text-white pl-8 pr-6 py-4 rounded-full font-medium shadow-lg hover:bg-[var(--color-primary-dark)] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3 group cursor-pointer"
+                        className="bg-primary text-white pl-8 pr-6 py-4 rounded-full font-medium shadow-lg hover:bg-primary-dark transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-3 group cursor-pointer"
                       >
                         <span>
                           {formData.products.trim().length > 0
@@ -415,10 +435,10 @@ export default function SkincareApp() {
                   >
                     <div className="relative w-24 h-24 mx-auto mb-10">
                       <div className="absolute inset-0 border-4 border-stone-100 rounded-full"></div>
-                      <div className="absolute inset-0 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin"></div>
+                      <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Beaker
-                          className="text-[var(--color-primary)] animate-pulse"
+                          className="text-primary animate-pulse"
                           size={28}
                         />
                       </div>
@@ -437,6 +457,13 @@ export default function SkincareApp() {
                       setStep(1);
                       setFormData({ skinType: "", concerns: [], products: "" });
                     }}
+                  />
+                )}
+
+                {step === 6 && (
+                  <ErrorView
+                    onRetry={generateRoutine}
+                    onBack={() => setStep(3)}
                   />
                 )}
               </AnimatePresence>
@@ -471,7 +498,7 @@ function GlobalFooter() {
           <a
             href="https://khaleelalhaji.info"
             target="_blank"
-            className="font-medium italic text-stone-700 hover:text-[var(--color-primary)] transition-colors border-b border-stone-200 hover:border-[var(--color-primary)] pb-0.5 cursor-pointer"
+            className="font-medium italic text-stone-700 hover:text-primary transition-colors border-b border-stone-200 hover:border-primary pb-0.5 cursor-pointer"
           >
             Khaleel Alhaji
           </a>
@@ -511,7 +538,7 @@ function ScienceView() {
         className="text-center max-w-3xl mx-auto mb-20"
       >
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-white mb-8">
-          <BrainCircuit size={14} className="text-[var(--color-primary)]" />
+          <BrainCircuit size={14} className="text-primary" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-stone-500">
             Methodology
           </span>
@@ -602,7 +629,7 @@ function ScienceView() {
           </div>
 
           {/* Visual Abstract Art */}
-          <div className="relative min-h-[300px] bg-gradient-to-br from-stone-900 to-[#0c0a09] flex items-center justify-center p-12">
+          <div className="relative min-h-[300px] bg-linear-to-br from-stone-900 to-[#0c0a09] flex items-center justify-center p-12">
             <div
               className="absolute inset-0 opacity-10"
               style={{
@@ -634,8 +661,6 @@ function ScienceView() {
     </motion.div>
   );
 }
-
-// --- REST OF YOUR COMPONENTS (LoadingMessages, StepWrapper, ActionButtons, ResultView) ---
 
 function LoadingMessages() {
   const messages = [
@@ -720,11 +745,11 @@ function ResultView({ result, reset }) {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-stone-200/40 border border-stone-100 mb-8 relative overflow-hidden"
       >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-primary)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-            <div className="flex items-center gap-3 text-[var(--color-primary-dark)]">
+            <div className="flex items-center gap-3 text-primary-dark">
               <Sparkles size={20} />
               <span className="text-xs font-bold tracking-[0.2em] uppercase">
                 Dermatological Analysis
@@ -735,7 +760,7 @@ function ResultView({ result, reset }) {
           <div className="prose prose-stone prose-lg text-stone-600 font-light leading-relaxed min-h-[120px]">
             {analysisText}
             {!typingFinished && (
-              <span className="inline-block w-1.5 h-5 ml-1 bg-[var(--color-primary)] animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-5 ml-1 bg-primary animate-pulse align-middle" />
             )}
           </div>
         </div>
@@ -751,7 +776,7 @@ function ResultView({ result, reset }) {
         >
           {/* NEW HEADER TEXT: The Bridge between Diagnosis and Action */}
           <div className="flex flex-col items-center max-w-2xl mx-auto mt-16 mb-10">
-            <div className="flex items-center gap-3 text-[var(--color-primary-dark)]">
+            <div className="flex items-center gap-3 text-primary-dark">
               <FlaskConical size={20} />
               <span className="text-xs font-bold tracking-[0.2em] uppercase">
                 Your Curated Protocol
@@ -762,7 +787,7 @@ function ResultView({ result, reset }) {
           {/* THE GRID */}
           <div className="grid lg:grid-cols-2 gap-8">
             {/* MORNING RITUAL */}
-            <div className="bg-white rounded-[2rem] p-8 md:p-10 border border-stone-200 shadow-lg shadow-stone-200/30 flex flex-col h-full">
+            <div className="bg-white rounded-4xl p-8 md:p-10 border border-stone-200 shadow-lg shadow-stone-200/30 flex flex-col h-full">
               <header className="flex items-center justify-between mb-10 pb-6 border-b border-stone-100">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
@@ -793,7 +818,7 @@ function ResultView({ result, reset }) {
             </div>
 
             {/* EVENING RITUAL */}
-            <div className="bg-[#1c1917] rounded-[2rem] p-8 md:p-10 border border-stone-800 shadow-2xl shadow-stone-900/20 flex flex-col h-full text-stone-200">
+            <div className="bg-[#1c1917] rounded-4xl p-8 md:p-10 border border-stone-800 shadow-2xl shadow-stone-900/20 flex flex-col h-full text-stone-200">
               <header className="flex items-center justify-between mb-10 pb-6 border-b border-white/10">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-indigo-900/30 text-indigo-300 flex items-center justify-center border border-white/5">
@@ -926,12 +951,52 @@ function RoutineRow({ item, number, isLast, theme }) {
 
 function ScienceCard({ icon, title, desc }) {
   return (
-    <div className="bg-white p-8 rounded-[2rem] border border-stone-100 shadow-lg shadow-stone-200/40 hover:shadow-xl hover:border-stone-200 transition-all duration-300 group h-full">
+    <div className="bg-white p-8 rounded-4xl border border-stone-100 shadow-lg shadow-stone-200/40 hover:shadow-xl hover:border-stone-200 transition-all duration-300 group h-full">
       <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center text-stone-900 mb-6 group-hover:scale-110 transition-transform duration-500">
         {icon}
       </div>
       <h3 className="font-serif text-xl text-stone-900 mb-3">{title}</h3>
       <p className="text-stone-500 text-sm leading-relaxed">{desc}</p>
     </div>
+  );
+}
+
+function ErrorView({ onRetry, onBack }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="w-full max-w-md mx-auto text-center py-20 px-6"
+    >
+      <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100">
+        <AlertTriangle className="text-red-500" size={32} strokeWidth={1.5} />
+      </div>
+
+      <h3 className="font-serif text-3xl text-stone-900 mb-4">
+        Analysis Interrupted
+      </h3>
+
+      <p className="text-stone-500 text-lg mb-8 leading-relaxed">
+        We couldn&apos;t synchronize with the Conflict Engine. This is usually
+        due to a temporary network issue.
+      </p>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={onRetry}
+          className="bg-stone-900 text-white px-8 py-4 rounded-full font-medium hover:bg-stone-800 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95"
+        >
+          <RefreshCcw size={18} />
+          Retry Connection
+        </button>
+
+        <button
+          onClick={onBack}
+          className="text-stone-400 hover:text-stone-600 text-sm font-medium py-2 transition-colors"
+        >
+          Edit Profile
+        </button>
+      </div>
+    </motion.div>
   );
 }
