@@ -26,7 +26,7 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-// --- Improved Typewriter Hook ---
+// --- Typewriter Hook ---
 const useTypewriter = (text, speed = 20, start = false, onComplete) => {
   const [displayedText, setDisplayedText] = useState("");
   const onCompleteRef = useRef(onComplete);
@@ -56,7 +56,7 @@ const useTypewriter = (text, speed = 20, start = false, onComplete) => {
 
 export default function CoriumAI() {
   const [view, setView] = useState("consultation"); // 'consultation' | 'science'
-  const [step, setStep] = useState(6);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     skinType: "",
@@ -138,7 +138,7 @@ export default function CoriumAI() {
     } catch (error) {
       console.error("Routine Generation Failed:", error);
       setLoading(false);
-      setStep(6); // <--- FORCE THE ERROR VIEW
+      setStep(6);
     }
   };
 
@@ -200,7 +200,7 @@ export default function CoriumAI() {
                     <span className="text-stone-400">/3</span>
                   </div>
                 </div>
-              ) : /* CASE 3: RESULT VIEW (STEP 5) - PILL BUTTON REDESIGN */
+              ) : /* CASE 3: RESULT VIEW (STEP 5) */
               step === 5 && result ? (
                 <nav className="flex items-center gap-5 animate-in fade-in duration-500">
                   {/* Button: Start Over (Pill Shape) */}
