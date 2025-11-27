@@ -200,9 +200,13 @@ export async function POST(req) {
     // 3. Extract Text
     let rawText = candidate.content.parts[0].text;
 
-    // 4. Clean & Parse JSON
-    // Remove markdown code fences if they exist
-    rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    // 4. CLEANING & PARSING (The Fix)
+    // Remove markdown code fences (```json)
+    rawText = rawText.replace(/```json/g, "").replace(/```/g, "");
+
+    // ⭐ NEW: Remove bolding asterisks (**text**) and markdown symbols
+    // This ensures your UI is strictly plain text
+    rawText = rawText.replace(/\*\*/g, "").replace(/\*/g, "").replace(/#/g, "");
     
     const json = JSON.parse(rawText);
 
