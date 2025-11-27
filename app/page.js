@@ -132,11 +132,9 @@ export default function SkincareApp() {
       `}</style>
 
       {/* Navbar */}
-{/* Navbar */}
       <header className="w-full fixed top-0 left-0 z-50 transition-all duration-300">
         <div className="bg-[#FAFAF9]/90 backdrop-blur-md border-b border-stone-200/50">
           <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center relative">
-            
             {/* --- LEFT: BRAND --- */}
             <div
               className="group cursor-pointer z-20"
@@ -152,7 +150,6 @@ export default function SkincareApp() {
 
             {/* --- RIGHT: ACTIONS --- */}
             <div className="flex items-center justify-end gap-4 z-20 min-w-[120px]">
-              
               {/* CASE 1: SCIENCE VIEW OPEN */}
               {view === "science" ? (
                 <button
@@ -162,9 +159,8 @@ export default function SkincareApp() {
                   <X size={14} />{" "}
                   <span className="hidden sm:inline">Close</span>
                 </button>
-              
-              /* CASE 2: ONBOARDING (STEPS 1-4) */
-              ) : isOnboarding ? (
+              ) : /* CASE 2: ONBOARDING (STEPS 1-4) */
+              isOnboarding ? (
                 <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
                   <div className="hidden sm:block text-[10px] font-bold tracking-widest uppercase text-stone-400">
                     STEP
@@ -182,19 +178,9 @@ export default function SkincareApp() {
                     <span className="text-stone-400">/3</span>
                   </div>
                 </div>
-
-              /* CASE 3: RESULT VIEW (STEP 5) - PILL BUTTON REDESIGN */
-              ) : step === 5 && result ? (
+              ) : /* CASE 3: RESULT VIEW (STEP 5) - PILL BUTTON REDESIGN */
+              step === 5 && result ? (
                 <nav className="flex items-center gap-5 animate-in fade-in duration-500">
-                  
-                  {/* Link: The Science */}
-                  {/* <button
-                    onClick={() => setView("science")}
-                    className="text-xs font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors cursor-pointer"
-                  >
-                    The Science
-                  </button> */}
-
                   {/* Button: Start Over (Pill Shape) */}
                   <button
                     onClick={() => {
@@ -203,13 +189,15 @@ export default function SkincareApp() {
                     }}
                     className="group flex items-center gap-2 px-5 py-2.5 bg-white border border-stone-200 rounded-full text-xs font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 hover:text-stone-900 hover:border-stone-300 hover:shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
-                    <RotateCcw size={12} className="group-hover:-rotate-180 transition-transform duration-500" />
+                    <RotateCcw
+                      size={12}
+                      className="group-hover:-rotate-180 transition-transform duration-500"
+                    />
                     <span>Start Over</span>
                   </button>
                 </nav>
-
-              /* CASE 4: LANDING PAGE (STEP 0) */
               ) : (
+                /* CASE 4: LANDING PAGE (STEP 0) */
                 <nav className="flex items-center">
                   <button
                     onClick={() => setView("science")}

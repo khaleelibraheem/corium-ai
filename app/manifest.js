@@ -5,7 +5,7 @@ export default function manifest() {
     description: 'Generate hyper-personalized skincare protocols based on biometric analysis and dermatological conflict logic.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#FAFAF9',
+    background_color: '#FDFCF8',
     theme_color: '#d4a373',
     orientation: 'portrait',
     icons: [
@@ -28,12 +28,5 @@ export default function manifest() {
       },
     ],
     categories: ['health', 'lifestyle', 'medical'],
-    screenshots: [
-      {
-        src: '/og-image.png',
-        sizes: '1200x630',
-        type: 'image/png',
-      }
-    ],
   }
 }

@@ -25,7 +25,14 @@ export const metadata = {
   openGraph: {
     title: "corium.ai | Clinical Intelligence for Your Skin",
     description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
-    images: ['/og-image.png'],
+       images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "corium.ai preview",
+      },
+    ],
     type: 'website',
   },
   twitter: {
