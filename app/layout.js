@@ -27,7 +27,7 @@ export const metadata = {
     description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
        images: [
       {
-        url: "/og-image.png",
+        url: "/opengraph-image.png",
         width: 1200,
         height: 630,
         alt: "corium.ai preview",
@@ -39,7 +39,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: "corium.ai | Clinical Intelligence for Your Skin",
     description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
-    images: ['/og-image.png'],
+    images: ['/opengraph-image.png'],
   },
 };
 
