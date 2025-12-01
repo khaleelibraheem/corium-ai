@@ -1,32 +1,34 @@
-import { Playfair_Display, Inter } from 'next/font/google';
+import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 
 // 1. Configure the Premium Serif Font (Headings/Brand)
-const playfair = Playfair_Display({ 
-  subsets: ['latin'],
-  variable: '--font-serif',
-  display: 'swap',
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  display: "swap",
 });
 
 // 2. Configure the Clean Clinical Sans Font (Body text)
-const inter = Inter({ 
-  subsets: ['latin'], 
-  variable: '--font-sans',
-  display: 'swap',
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata = {
   title: "corium.ai | Clinical Intelligence for Your Skin",
-  description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
+  description:
+    "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
   icons: {
-    icon: '/icon-192.png',        
-    apple: '/apple-icon.png',
+    icon: "/icon-192.png",
+    apple: "/apple-icon.png",
   },
   openGraph: {
     title: "corium.ai | Clinical Intelligence for Your Skin",
-    description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
+    description:
+      "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
     url: "https://corium-ai.vercel.app",
-       images: [
+    images: [
       {
         url: "/opengraph-image.png",
         width: 1200,
@@ -34,13 +36,15 @@ export const metadata = {
         alt: "corium.ai preview",
       },
     ],
-    type: 'website',
+    type: "website",
+    siteName: "corium.ai",
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
     title: "corium.ai | Clinical Intelligence for Your Skin",
-    description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
-    images: ['/opengraph-image.png'],
+    description:
+      "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
+    images: ["/opengraph-image.png"],
   },
 };
 
