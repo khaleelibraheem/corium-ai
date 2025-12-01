@@ -25,6 +25,7 @@ export const metadata = {
   openGraph: {
     title: "corium.ai | Clinical Intelligence for Your Skin",
     description: "Generate a hyper-personalized skincare protocol based on biometric analysis and dermatological conflict logic.",
+    url: "https://corium-ai.vercel.app",
        images: [
       {
         url: "/opengraph-image.png",
