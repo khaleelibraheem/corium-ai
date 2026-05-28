@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { generateRoutinePDF } from "@/lib/generateRoutinePDF";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -55,6 +57,8 @@ const useTypewriter = (text, speed = 20, start = false, onComplete) => {
 };
 
 export default function CoriumAI() {
+  const { data: session, status } = useSession();
+  const firstName = session?.user?.name?.split(" ")[0] ?? null;
   const [view, setView] = useState("consultation"); // 'consultation' | 'science'
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -117,7 +121,7 @@ export default function CoriumAI() {
 
       const data = await res.json();
 
-      // 2. DATA INTEGRITY CHECK (The "Blank Page" Killer)
+      // 2. DATA INTEGRITY CHECK
       // If the AI returned garbage or an empty object, throw an error immediately.
       if (
         !data ||
@@ -128,7 +132,11 @@ export default function CoriumAI() {
         throw new Error("Received empty or malformed protocol from AI");
       }
 
-      setResult(data);
+      setResult({
+        ...data,
+        skinType: formData.skinType,
+        concerns: formData.concerns,
+      });
 
       // Wait 1s for the animation to look good, then show results
       setTimeout(() => {
@@ -141,6 +149,67 @@ export default function CoriumAI() {
       setStep(6);
     }
   };
+
+  function AuthButton({ session, status }) {
+    if (status === "loading") return null;
+
+    if (session) {
+      return (
+        <button
+          onClick={() => signOut()}
+          className="group flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm transition-all cursor-pointer"
+        >
+          {session.user.image ? (
+            <img
+              src={session.user.image}
+              alt={session.user.name}
+              className="w-7 h-7 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary-dark">
+              {session.user.name?.[0]}
+            </div>
+          )}
+          <span className="text-xs font-medium text-stone-600 group-hover:text-stone-900 transition-colors hidden sm:block">
+            {session.user.name?.split(" ")[0]}
+          </span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => signIn("google")}
+        className="flex items-center gap-2 px-4 py-2 rounded-full border border-stone-200 bg-white text-xs font-bold uppercase tracking-wider text-stone-500 hover:border-stone-800 hover:text-stone-900 transition-all cursor-pointer shadow-sm hover:shadow-md"
+      >
+        <GoogleIcon size={14} />
+        <span className="hidden sm:inline">Sign in</span>
+      </button>
+    );
+  }
+
+  function GoogleIcon({ size = 16 }) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+        <path
+          d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
+          fill="#4285F4"
+        />
+        <path
+          d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+          fill="#34A853"
+        />
+        <path
+          d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+          fill="#FBBC05"
+        />
+        <path
+          d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+          fill="#EA4335"
+        />
+      </svg>
+    );
+  }
 
   const isOnboarding = step > 0 && step < 5 && view === "consultation";
 
@@ -172,6 +241,7 @@ export default function CoriumAI() {
 
             {/* --- RIGHT: ACTIONS --- */}
             <div className="flex items-center justify-end gap-4 z-20 min-w-[120px]">
+              <AuthButton session={session} status={status} />
               {/* CASE 1: SCIENCE VIEW OPEN */}
               {view === "science" ? (
                 <button
@@ -203,7 +273,7 @@ export default function CoriumAI() {
               ) : /* CASE 3: RESULT VIEW (STEP 5) */
               step === 5 && result ? (
                 <nav className="flex items-center gap-5 animate-in fade-in duration-500">
-                  {/* Button: Start Over (Pill Shape) */}
+                  {/* Button: Start Over */}
                   <button
                     onClick={() => {
                       setStep(0);
@@ -259,27 +329,59 @@ export default function CoriumAI() {
                       </span>
                     </div>
 
-                    <h1 className="font-serif text-5xl md:text-7xl text-stone-900 leading-[1.1]">
-                      Your skin, <br />
-                      <span className="italic text-primary">decoded.</span>
-                    </h1>
+                    {firstName ? (
+                      // --- LOGGED IN HERO ---
+                      <>
+                        <p className="text-sm font-medium uppercase tracking-widest text-primary-dark">
+                          Welcome back
+                        </p>
+                        <h1 className="font-serif text-5xl md:text-7xl text-stone-900 leading-[1.1]">
+                          {firstName}, what&apos;s{" "}
+                          <span className="italic text-primary">troubling</span>
+                          <br />
+                          your skin today?
+                        </h1>
+                        <p className="text-lg md:text-xl text-stone-500 max-w-lg mx-auto leading-relaxed">
+                          Your personalized regimen is three steps away. The
+                          Conflict Engine is ready.
+                        </p>
+                      </>
+                    ) : (
+                      // --- LOGGED OUT HERO ---
+                      <>
+                        <h1 className="font-serif text-5xl md:text-7xl text-stone-900 leading-[1.1]">
+                          Your skin, <br />
+                          <span className="italic text-primary">decoded.</span>
+                        </h1>
+                        <p className="text-lg md:text-xl text-stone-500 max-w-lg mx-auto leading-relaxed">
+                          Generate a hyper-personalized regimen based on your
+                          unique biometric markers and Corium&apos;s
+                          conflict-check engine.
+                        </p>
+                      </>
+                    )}
 
-                    <p className="text-lg md:text-xl text-stone-500 max-w-lg mx-auto leading-relaxed">
-                      Generate a hyper-personalized regimen based on your unique
-                      biometric markers and Corium&apos;s conflict-check engine.
-                    </p>
-
-                    <div className="pt-8">
+                    <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                       <button
                         onClick={nextStep}
-                        className="group bg-stone-900 text-white px-10 py-5 rounded-full text-lg font-medium transition-all hover:bg-stone-800 hover:shadow-xl hover:shadow-(--color-primary)/20 inline-flex items-center gap-2 cursor-pointer"
+                        className="group bg-stone-900 text-white px-10 py-5 rounded-full text-lg font-medium transition-all hover:bg-stone-800 hover:shadow-xl hover:shadow-[var(--color-primary)]/20 inline-flex items-center gap-2 cursor-pointer"
                       >
-                        Start Consultation
+                        {firstName ? "Begin Analysis" : "Start Consultation"}
                         <ArrowRight
                           size={18}
                           className="group-hover:translate-x-1 transition-transform"
                         />
                       </button>
+
+                      {!firstName && status !== "loading" && (
+                        <button
+                          onClick={() => signIn("google")}
+                          className="group flex items-center gap-2 px-6 py-5 rounded-full border border-stone-200 bg-white text-stone-600 text-base font-medium hover:border-stone-300 hover:shadow-md transition-all cursor-pointer"
+                        >
+                          <GoogleIcon />
+                          Sign in with Google
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -300,7 +402,7 @@ export default function CoriumAI() {
                             "group p-6 rounded-xl border text-left transition-all duration-300 relative overflow-hidden cursor-pointer",
                             formData.skinType === type.id
                               ? "border-primary bg-white shadow-lg ring-1 ring-primary"
-                              : "border-stone-200 bg-white hover:border-primary-dark hover:shadow-md"
+                              : "border-stone-200 bg-white hover:border-primary-dark hover:shadow-md",
                           )}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -339,7 +441,7 @@ export default function CoriumAI() {
                             "px-4 py-4 rounded-xl text-sm font-medium transition-all duration-200 border flex flex-col items-center justify-center gap-2 text-center h-24 cursor-pointer",
                             formData.concerns.includes(concern)
                               ? "bg-stone-900 text-white border-stone-900 shadow-md scale-[1.02]"
-                              : "bg-white text-stone-600 border-stone-200 hover:border-primary hover:shadow-sm"
+                              : "bg-white text-stone-600 border-stone-200 hover:border-primary hover:shadow-sm",
                           )}
                         >
                           {concern}
@@ -478,7 +580,7 @@ export default function CoriumAI() {
   );
 }
 
-// --- NEW COMPONENT: GLOBAL FOOTER ---
+// --- GLOBAL FOOTER ---
 function GlobalFooter() {
   return (
     <footer className="w-full py-6 border-t border-stone-200/60 bg-[#FAFAF9] relative z-10 text-xs md:text-sm">
@@ -719,7 +821,7 @@ function ActionButtons({ canNext, onNext, onBack }) {
           "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-md",
           canNext
             ? "bg-stone-900 text-white hover:bg-black hover:scale-110 cursor-pointer"
-            : "bg-stone-200 text-stone-400 cursor-not-allowed shadow-none"
+            : "bg-stone-200 text-stone-400 cursor-not-allowed shadow-none",
         )}
       >
         <ChevronRight size={24} />
@@ -731,11 +833,33 @@ function ActionButtons({ canNext, onNext, onBack }) {
 function ResultView({ result, reset }) {
   const [typingFinished, setTypingFinished] = useState(false);
   const scrollRef = useRef(null);
+  const { data: session } = useSession();
+  const [downloading, setDownloading] = useState(false);
 
   // typewriter logic
   const analysisText = useTypewriter(result.analysis, 10, true, () => {
     setTypingFinished(true);
   });
+
+  const handleExport = async () => {
+    setDownloading(true);
+    // Small delay so the button state visually updates before the
+    // synchronous PDF generation blocks the thread
+    await new Promise((r) => setTimeout(r, 50));
+    try {
+      const name = session?.user?.name?.split(" ")[0] ?? null;
+      generateRoutinePDF(
+        {
+          ...result,
+          skinType: result.skinType,
+          concerns: result.concerns,
+        },
+        name,
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto py-4 font-sans text-stone-900">
@@ -746,7 +870,6 @@ function ResultView({ result, reset }) {
         className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-stone-200/40 border border-stone-100 mb-8 relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
         <div className="relative z-10">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3 text-primary-dark">
@@ -755,6 +878,65 @@ function ResultView({ result, reset }) {
                 Dermatological Analysis
               </span>
             </div>
+
+            {/* ── EXPORT BUTTON ── */}
+            {typingFinished && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={handleExport}
+                disabled={downloading}
+                className={cn(
+                  "group flex items-center gap-2 px-5 py-2.5 rounded-full border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer",
+                  downloading
+                    ? "border-stone-200 text-stone-400 bg-white"
+                    : "border-primary bg-white text-primary-dark hover:bg-primary hover:text-white hover:shadow-lg hover:shadow-primary/20 active:scale-95",
+                )}
+              >
+                {downloading ? (
+                  <>
+                    <svg
+                      className="animate-spin w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
+                    </svg>
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export PDF
+                  </>
+                )}
+              </motion.button>
+            )}
           </div>
 
           <div className="prose prose-stone prose-lg text-stone-600 font-light leading-relaxed min-h-[120px]">
@@ -882,7 +1064,7 @@ function RoutineRow({ item, number, isLast, theme }) {
         <div
           className={cn(
             "absolute left-[15px] top-10 bottom-0 w-px",
-            isDark ? "bg-white/10" : "bg-stone-200"
+            isDark ? "bg-white/10" : "bg-stone-200",
           )}
         />
       )}
@@ -892,7 +1074,7 @@ function RoutineRow({ item, number, isLast, theme }) {
           "absolute left-0 top-1 w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold z-10 transition-colors",
           isDark
             ? "bg-[#1c1917] border-stone-700 text-stone-500 group-hover:border-indigo-400 group-hover:text-indigo-400"
-            : "bg-white border-stone-200 text-stone-400 group-hover:border-orange-400 group-hover:text-orange-500"
+            : "bg-white border-stone-200 text-stone-400 group-hover:border-orange-400 group-hover:text-orange-500",
         )}
       >
         {number}
@@ -904,7 +1086,7 @@ function RoutineRow({ item, number, isLast, theme }) {
             <span
               className={cn(
                 "text-[10px] font-bold uppercase tracking-wider mb-1",
-                isDark ? "text-indigo-300/80" : "text-orange-600/80"
+                isDark ? "text-indigo-300/80" : "text-orange-600/80",
               )}
             >
               {item.type}
@@ -912,7 +1094,7 @@ function RoutineRow({ item, number, isLast, theme }) {
             <h4
               className={cn(
                 "text-lg font-medium",
-                isDark ? "text-white" : "text-stone-900"
+                isDark ? "text-white" : "text-stone-900",
               )}
             >
               {item.name}
@@ -923,7 +1105,7 @@ function RoutineRow({ item, number, isLast, theme }) {
         <p
           className={cn(
             "text-sm leading-relaxed mb-3 max-w-md",
-            isDark ? "text-stone-400" : "text-stone-500"
+            isDark ? "text-stone-400" : "text-stone-500",
           )}
         >
           {item.note}
@@ -935,7 +1117,7 @@ function RoutineRow({ item, number, isLast, theme }) {
               "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors cursor-pointer",
               isDark
                 ? "bg-white/5 text-stone-300 hover:bg-white/10"
-                : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                : "bg-stone-100 text-stone-600 hover:bg-stone-200",
             )}
           >
             <ArrowRight size={12} className="opacity-50" />

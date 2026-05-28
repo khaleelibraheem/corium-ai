@@ -1,5 +1,6 @@
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
 
 // 1. Configure the Premium Serif Font (Headings/Brand)
 const playfair = Playfair_Display({
@@ -58,7 +59,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
       <body className="bg-[#FAFAF9] text-stone-900 antialiased selection:bg-[#d4a373] selection:text-white">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
